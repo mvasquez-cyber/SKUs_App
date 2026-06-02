@@ -18,6 +18,10 @@ def guia_estudio_view(
     save_cache_callback,
 ):
     from session_manager import register_interaction
+    from views.filtros import get_elementos_visibles
+
+    is_dark = page.theme_mode == ft.ThemeMode.DARK
+    text_color = ft.Colors.WHITE if is_dark else ft.Colors.BLACK
 
     def handle_interaction(e=None):
         register_interaction(time_offset)
@@ -58,14 +62,6 @@ def guia_estudio_view(
 
     # ─── Construcción del acordeón ────────────────────────────────────────────
 
-    def filtered_products():
-        prods = data["productos"]
-        if data["marca"]:
-            prods = [p for p in prods if p.get("marca") == data["marca"]]
-        if data["solo_infaltables"]:
-            prods = [p for p in prods if p.get("estatus") in INFALTABLES]
-        return prods
-
     def product_row(prod):
         is_infaltable = prod.get("estatus") in INFALTABLES
         img_url = prod.get("imagen_url")
@@ -90,7 +86,7 @@ def guia_estudio_view(
                     ft.Text(value=prod.get("nombre", ""), size=12, no_wrap=False),
                     *(
                         [ft.Text(value=mnem, size=10, italic=True,
-                                 color=ft.Colors.with_opacity(0.6, primary_color), no_wrap=False)]
+                                 color=ft.Colors.with_opacity(0.8, primary_color), no_wrap=False)]
                         if mnem else []
                     ),
                 ],
@@ -133,7 +129,7 @@ def guia_estudio_view(
         prod_col = ft.Column(visible=False, spacing=0, controls=[])
         sub_arrow = ft.Icon(
             ft.Icons.KEYBOARD_ARROW_DOWN, size=16,
-            color=ft.Colors.with_opacity(0.5, ft.Colors.BLACK),
+            color=ft.Colors.with_opacity(0.5, text_color),
         )
         sub_mnemo = ft.Container(
             visible=False,
@@ -142,9 +138,9 @@ def guia_estudio_view(
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=12,
-                            color=ft.Colors.with_opacity(0.6, primary_color)),
+                            color=ft.Colors.with_opacity(0.8, primary_color)),
                     ft.Text(mnem_sub, size=11, italic=True,
-                            color=ft.Colors.with_opacity(0.6, primary_color),
+                            color=ft.Colors.with_opacity(0.8, primary_color),
                             expand=True),
                 ],
                 spacing=6,
@@ -179,7 +175,7 @@ def guia_estudio_view(
             padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             on_click=sub_toggle,
             border=ft.Border(
-                bottom=ft.BorderSide(0.5, ft.Colors.with_opacity(0.08, ft.Colors.BLACK))
+                bottom=ft.BorderSide(0.5, ft.Colors.with_opacity(0.08, primary_color))
             ),
             content=ft.Row(
                 controls=[
@@ -190,7 +186,7 @@ def guia_estudio_view(
                     ft.Text(
                         f"{sub_cod}  {sub_name}",
                         size=13, weight=ft.FontWeight.W_500,
-                        color=ft.Colors.with_opacity(0.87, ft.Colors.BLACK),
+                        color=text_color,
                         expand=True,
                     ),
                     sub_arrow,
@@ -223,9 +219,9 @@ def guia_estudio_view(
             content=ft.Row(
                 controls=[
                     ft.Icon(ft.Icons.LIGHTBULB_OUTLINE, size=14,
-                            color=ft.Colors.with_opacity(0.7, primary_color)),
+                            color=ft.Colors.with_opacity(0.8, primary_color)),
                     ft.Text(mnem_cat, size=12, italic=True,
-                            color=ft.Colors.with_opacity(0.7, primary_color),
+                            color=ft.Colors.with_opacity(0.8, primary_color),
                             expand=True),
                 ],
                 spacing=8,
@@ -237,10 +233,7 @@ def guia_estudio_view(
             handle_interaction()
             cat_expanded[0] = not cat_expanded[0]
             if cat_expanded[0] and not sub_col.controls:
-                sub_filter = data["sub_search"].strip().lower()
                 subs = sorted(sub_map.get(cat_cod, []), key=lambda x: x.get("codigo", ""))
-                if sub_filter:
-                    subs = [s for s in subs if sub_filter in s.get("nombre", "").lower()]
                 sub_col.controls = [
                     _build_sub_tile(s, prod_map.get((cat_cod, s.get("codigo", "")), []))
                     for s in subs
@@ -303,42 +296,17 @@ def guia_estudio_view(
         )
 
     def build_accordion():
-        visible_prods = filtered_products()
+        cats_v, subs_v, prods_v = get_elementos_visibles(
+            categorias=data["categorias"],
+            subcategorias=data["subcategorias"],
+            productos=data["productos"],
+            marca_filtro=data["marca"],
+            solo_infaltables=data["solo_infaltables"],
+            busqueda_cat=data["cat_search"],
+            busqueda_sub=data["sub_search"],
+        )
 
-        prod_map = {}
-        for p in visible_prods:
-            key = (p.get("categoria_codigo"), p.get("subcategoria_codigo"))
-            prod_map.setdefault(key, []).append(p)
-
-        sub_map = {}
-        for s in data["subcategorias"]:
-            sub_map.setdefault(s.get("categoria_codigo"), []).append(s)
-
-        cat_filter = data["cat_search"].strip().lower()
-        sub_filter = data["sub_search"].strip().lower()
-
-        panels = []
-        for cat in sorted(data["categorias"], key=lambda x: x.get("codigo", "")):
-            cat_cod = cat.get("codigo", "")
-
-            if cat_filter and cat_filter not in cat.get("nombre", "").lower():
-                continue
-
-            has_products = any(k[0] == cat_cod for k in prod_map)
-            if data["solo_infaltables"] and not has_products:
-                continue
-
-            if sub_filter:
-                matching_subs = [
-                    s for s in sub_map.get(cat_cod, [])
-                    if sub_filter in s.get("nombre", "").lower()
-                ]
-                if not matching_subs:
-                    continue
-
-            panels.append(_build_cat_card(cat, sub_map, prod_map))
-
-        if not panels:
+        if not cats_v:
             return ft.Container(
                 content=ft.Column(
                     controls=[
@@ -357,6 +325,20 @@ def guia_estudio_view(
                 expand=True,
                 padding=ft.Padding.all(24),
             )
+
+        prod_map = {}
+        for p in prods_v:
+            key = (p.get("categoria_codigo"), p.get("subcategoria_codigo"))
+            prod_map.setdefault(key, []).append(p)
+
+        sub_map = {}
+        for s in subs_v:
+            sub_map.setdefault(s.get("categoria_codigo"), []).append(s)
+
+        panels = [
+            _build_cat_card(cat, sub_map, prod_map)
+            for cat in sorted(cats_v, key=lambda x: x.get("codigo", ""))
+        ]
 
         return ft.ListView(
             controls=panels,
