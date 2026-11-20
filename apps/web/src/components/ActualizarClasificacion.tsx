@@ -171,10 +171,22 @@ export default function ActualizarClasificacion() {
   const [mismoParaTodos, setMismoParaTodos] = useState(false);
   const [estatusUnico, setEstatusUnico] = useState("");
   const [estatusReemplazo, setEstatusReemplazo] = useState("");
+  const [filtroMarca, setFiltroMarca] = useState("");
   const [fase, setFase] = useState<Fase>({ tipo: "inactivo" });
   const [elecciones, setElecciones] = useState<Elecciones>(new Map());
 
   const acento = colorEmpresa(sede);
+  // "" = todas las marcas (comportamiento de siempre: el archivo define el
+  // conjunto completo de infaltables de la sede). Con una marca elegida, el
+  // archivo define el conjunto completo de infaltables de ESA marca dentro
+  // de la sede — así se puede recargar solo Bellota sin tocar el resto.
+  const marcasDisponibles = useMemo(
+    () =>
+      Array.from(new Set(productos.map((p) => p.marca).filter((m): m is string => !!m))).sort(
+        (a, b) => a.localeCompare(b, "es")
+      ),
+    [productos]
+  );
   const codigosInfaltables = useMemo(
     () => estatus.filter((e) => e.es_infaltable).map((e) => e.codigo).sort(),
     [estatus]
@@ -380,13 +392,17 @@ export default function ActualizarClasificacion() {
 
     // Los que hoy son infaltables y no vienen en el archivo: cambian al
     // estatus de reemplazo. No se borra nada, solo cambia esta columna.
+    // Con una marca elegida, el "conjunto completo" que el archivo reemplaza
+    // es el de esa marca, no el de toda la sede — si no, cargar un archivo de
+    // una sola marca le quitaría el estatus infaltable a todas las demás.
     const pierden: Asignado[] = estatusReemplazo
       ? productos
           .filter(
             (p) =>
               infaltables.has(p.estatus) &&
               !codigosDelArchivo.has(codigoDe(p)) &&
-              p.estatus !== estatusReemplazo
+              p.estatus !== estatusReemplazo &&
+              (!filtroMarca || p.marca === filtroMarca)
           )
           .map((p) => ({
             id: p.id,
@@ -419,6 +435,7 @@ export default function ActualizarClasificacion() {
     mismoParaTodos,
     estatusUnico,
     estatusReemplazo,
+    filtroMarca,
     sede,
     categoriaNombrePorCodigo,
     subcategoriaNombrePorCategoriaYCodigo,
@@ -626,12 +643,40 @@ export default function ActualizarClasificacion() {
                   ))}
                 </select>
               </label>
+
+              <label className="flex flex-col gap-1.5">
+                <span className="versalita">Marca (opcional)</span>
+                <select
+                  className={SELECT}
+                  value={filtroMarca}
+                  onChange={(e) => setFiltroMarca(e.target.value)}
+                >
+                  <option value="">Todas</option>
+                  {marcasDisponibles.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <p className="mt-3 text-sm text-marca-texto">
-              El archivo define la lista completa de infaltables de {sede}: todo
-              producto que hoy sea infaltable y no aparezca en él cambia al
-              estatus elegido a la derecha. No se borra ningún producto.
+              {filtroMarca ? (
+                <>
+                  El archivo define la lista completa de infaltables de{" "}
+                  <b>{filtroMarca}</b> en {sede}: todo producto de esa marca que
+                  hoy sea infaltable y no aparezca en él cambia al estatus
+                  elegido a la derecha. Las demás marcas no se tocan.
+                </>
+              ) : (
+                <>
+                  El archivo define la lista completa de infaltables de {sede}:
+                  todo producto que hoy sea infaltable y no aparezca en él
+                  cambia al estatus elegido a la derecha.
+                </>
+              )}{" "}
+              No se borra ningún producto.
             </p>
           </section>
 
@@ -653,6 +698,7 @@ export default function ActualizarClasificacion() {
               key={nombreArchivo}
               revision={revision}
               sede={sede}
+              filtroMarca={filtroMarca}
               acento={acento}
               estatusReemplazo={estatusReemplazo}
               elecciones={elecciones}
@@ -702,6 +748,7 @@ export default function ActualizarClasificacion() {
       {fase.tipo === "confirmando" && revision && (
         <ModalConfirmacion
           sede={sede}
+          filtroMarca={filtroMarca}
           acento={acento}
           revision={revision}
           sobrescrituras={sobrescrituras}
@@ -716,6 +763,7 @@ export default function ActualizarClasificacion() {
 
 function ModalConfirmacion({
   sede,
+  filtroMarca,
   acento,
   revision,
   sobrescrituras,
@@ -724,6 +772,7 @@ function ModalConfirmacion({
   onConfirmar,
 }: {
   sede: string;
+  filtroMarca: string;
   acento: string;
   revision: {
     asignados: Asignado[];
@@ -757,6 +806,12 @@ function ModalConfirmacion({
             />
             {sede}
           </span>
+          {filtroMarca && (
+            <>
+              {" "}
+              — solo productos de la marca <b>{filtroMarca}</b>
+            </>
+          )}
           . Esto no se puede deshacer desde aquí.
         </p>
 
@@ -841,6 +896,7 @@ function filasPorCampo(avisos: Asignado[], campo: Campo): FilaCampo[] {
 function Revision({
   revision,
   sede,
+  filtroMarca,
   acento,
   estatusReemplazo,
   elecciones,
@@ -855,6 +911,7 @@ function Revision({
     avisos: Asignado[];
   };
   sede: string;
+  filtroMarca: string;
   acento: string;
   estatusReemplazo: string;
   elecciones: Elecciones;
@@ -1029,7 +1086,9 @@ function Revision({
 
       {pierden.length > 0 && (
         <TablaCambios
-          titulo="Dejan de ser infaltables"
+          titulo={
+            filtroMarca ? `Dejan de ser infaltables (${filtroMarca})` : "Dejan de ser infaltables"
+          }
           filas={pierden}
           acento={acento}
           alerta

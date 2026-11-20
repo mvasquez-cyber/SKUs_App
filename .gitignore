@@ -75,3 +75,12 @@ formato-mayoreo*.zip
 # Versión anterior de la app (Flet/Python): se conserva en local solo como
 # referencia de la migración a Flutter. No se versiona.
 _old/
+
+# Material interno en la raíz que nunca debe llegar al repo público:
+# clones viejos del repo de ronirck (con .env), volcados SQL con datos de
+# usuarios, archivos comprimidos, Excel de trabajo y notas de la migración.
+/GitHub/
+/Backups/
+*.rar
+/*.xlsx
+/MIGRACION_CUENTAS.md

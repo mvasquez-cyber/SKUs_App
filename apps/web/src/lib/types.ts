@@ -1,10 +1,4 @@
-export const SEDES = [
-  "FEBECA",
-  "SILLACA",
-  "BEVAL",
-  "COFERSA",
-  "MUNDIAL DE PARTES",
-] as const;
+export const SEDES = ["FEBECA", "SILLACA", "BEVAL"] as const;
 
 export type Sede = (typeof SEDES)[number];
 

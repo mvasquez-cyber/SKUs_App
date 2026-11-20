@@ -136,6 +136,7 @@ load/reconciliation script, since the conventions there aren't otherwise derivab
 - `CONTEXTO_DESARROLLO.md` — long-form development history/journal of the Flutter rebuild,
   phase by phase, including decisions and their rationale. Consult it for *why* something is
   built the way it is; not needed for routine changes.
-- `PLAN_PRUEBA_NEON.md` — active working notes for an in-progress, non-committal technical
-  evaluation of Neon (Postgres + Neon Auth) as a possible future replacement for Supabase.
-  Supabase remains the only backend actually used by the app; nothing here is wired up yet.
+- `PLAN_PRUEBA_NEON.md` (repo root) — history of a Neon (Postgres + Neon Auth) evaluation,
+  **discarded on 2026-08-01**: Neon Auth only accepts `http`/`https` redirect targets, ruling out
+  the custom-scheme deep link this app's login uses. The test project was deleted. Supabase
+  `yzlhvabujsyuiqgaffrc` is the only backend.

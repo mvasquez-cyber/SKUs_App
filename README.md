@@ -20,8 +20,9 @@ común: Supabase (Postgres + Auth + RLS).
 - **`Data/`** — scripts Python de carga/reconciliación del catálogo hacia Supabase desde los Excel
   de cada casa. No versionado en git (información interna). Ver `Data/reglas_carga.md` para las
   reglas y precedentes de carga antes de escribir un script nuevo.
-- **`PLAN_PRUEBA_NEON.md`** — evaluación técnica en curso (no decidida) de Neon como posible
-  reemplazo de Supabase; afecta a ambas apps si se llegara a migrar.
+- **`PLAN_PRUEBA_NEON.md`** — registro histórico de la evaluación de Neon como posible reemplazo
+  de Supabase. Se descartó el 2026-08-01 y el proyecto de prueba se eliminó; la única base de
+  datos de producción es el proyecto de Supabase `yzlhvabujsyuiqgaffrc`.
 
 Ambas apps comparten el mismo proyecto de Supabase — cualquier cambio de esquema (tablas, RLS)
 afecta a las dos.
